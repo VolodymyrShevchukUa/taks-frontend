@@ -52,13 +52,19 @@ const App = () => {
                 name: newDepartmentName,
             });
 
+            // Update the state with the new department
             setDepartments((prevDepartments) => [...prevDepartments, response.data]);
 
+            // Clear the input field
             setNewDepartmentName('');
+
+            // Fetch the updated list of departments
+            fetchDepartments();
         } catch (error) {
             console.error('Error creating new department:', error);
         }
     };
+
 
     const handleSearchChange = (e) => {
         setSearchString(e.target.value);
@@ -71,7 +77,7 @@ const App = () => {
 
     return (
         <div className="app-container">
-            <h1>Your App Title</h1>
+            <h1>Bots crew test task</h1>
 
             {/* Search Bar */}
             <form onSubmit={handleSearchSubmit}>
