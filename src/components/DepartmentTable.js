@@ -1,17 +1,24 @@
-// DepartmentTable.js
-import React, { useState } from 'react';
-import './DepartmentTable.css'; // Import the CSS
+import React, { useState, useEffect } from 'react';
+import './DepartmentTable.css';
 import axios from 'axios';
 
-const DepartmentTable = ({ department, setDepartment }) => {
+const DepartmentTable = ({ department, setDepartment, newDepartment }) => {
     const [editMode, setEditMode] = useState(false);
     const [newName, setNewName] = useState('');
-    const [editingLectorId, setEditingLectorId] = useState(null);
+    const [newGrade, setNewGrade] = useState('');
+    const [editingLectorId, setEditingLectorId] = useState('');
+    const [nameValidationMessage, setNameValidationMessage] = useState('');
 
-    // New state for the add lector form
     const [showAddLectorForm, setShowAddLectorForm] = useState(false);
     const [newLectorName, setNewLectorName] = useState('');
-    const [newLectorDegree, setNewLectorDegree] = useState('');
+
+    const GRADE_OPTIONS = ['ASSISTANT', 'ASSOCIATE_PROFESSOR', 'PROFESSOR'];
+
+    useEffect(() => {
+        if (newDepartment && newDepartment.id === department.id) {
+            setDepartment(newDepartment);
+        }
+    }, [newDepartment, department.id, setDepartment]);
 
     const handleEditClick = (lectorId, currentName) => {
         setEditMode(true);
@@ -19,38 +26,39 @@ const DepartmentTable = ({ department, setDepartment }) => {
         setNewName(currentName);
     };
 
-    const handleCancelEdit = () => {
-        setEditMode(false);
-        setEditingLectorId(null);
-        setNewName('');
+    const validateName = (name) => {
+        const nameRegex = /^[a-zA-Z]+ [a-zA-Z]+$/;
+
+        if (!nameRegex.test(name)) {
+            setNameValidationMessage('Name should contain two words with no special characters or numbers.');
+            return false;
+        } else {
+            setNameValidationMessage('');
+            return true;
+        }
     };
 
     const handleSaveEdit = (lectorId) => {
-        // Make a request to the backend to update the lector's name
-        axios
-            .put(`http://localhost:8080/lectors/${lectorId}?name=${newName}`)
-            .then(() => {
-                // Handle the successful response, e.g., fetch updated department data from the server
-                axios.get(`http://localhost:8080/departments/${department.id}`)
-                    .then((response) => {
-                        // Update the local state with the fresh data from the server
-                        setDepartment(response.data);
-                    })
-                    .catch((error) => {
-                        console.error('Error fetching updated department data:', error);
-                        // Handle the error appropriately, e.g., show an error message
-                    });
+        if (validateName(newName)) {
+            axios
+                .put(`http://localhost:8080/lectors/${lectorId}?name=${newName}`)
+                .then(() => {
+                    axios.get(`http://localhost:8080/departments/${department.id}`)
+                        .then((response) => {
+                            setDepartment(response.data);
+                        })
+                        .catch((error) => {
+                            console.error('Error fetching updated department data:', error);
+                        });
 
-                // Reset the edit mode and new name
-                setEditMode(false);
-                setEditingLectorId(null);
-                setNewName('');
-            })
-            .catch((error) => {
-                // Handle the error, e.g., display an error message
-                console.error('Error updating lector name:', error);
-                // You might want to implement additional error handling here
-            });
+                    setEditMode(false);
+                    setEditingLectorId('');
+                    setNewName('');
+                })
+                .catch((error) => {
+                    console.error('Error updating lector name:', error);
+                });
+        }
     };
 
     const handleKeyPress = (event, lectorId) => {
@@ -66,38 +74,50 @@ const DepartmentTable = ({ department, setDepartment }) => {
     const handleCancelAddLector = () => {
         setShowAddLectorForm(false);
         setNewLectorName('');
-        setNewLectorDegree('');
+        setNameValidationMessage('');
     };
 
     const handleAddLector = () => {
-        // Make a request to the backend to add a new lector to the department
+        if (validateName(newLectorName)) {
+            axios
+                .post(`http://localhost:8080/lectors`, {
+                    name: newLectorName,
+                    grade: newGrade,
+                    departmentId: department.id,
+                })
+                .then(() => {
+                    axios.get(`http://localhost:8080/departments/${department.id}`)
+                        .then((response) => {
+                            setDepartment(response.data);
+                        })
+                        .catch((error) => {
+                            console.error('Error fetching updated department data:', error);
+                        });
+
+                    setShowAddLectorForm(false);
+                    setNewLectorName('');
+                    setNewGrade('');
+                })
+                .catch((error) => {
+                    console.error('Error adding new lector:', error);
+                });
+        }
+    };
+
+    const handlePromote = (lectorId) => {
         axios
-            .post(`http://localhost:8080/lectors`, {
-                name: newLectorName,
-                grade: newLectorDegree,
-                departmentId: department.id,
-            })
+            .patch(`http://localhost:8080/lectors/${lectorId}/promote`)
             .then(() => {
-                // Handle the successful response, e.g., fetch updated department data from the server
                 axios.get(`http://localhost:8080/departments/${department.id}`)
                     .then((response) => {
-                        // Update the local state with the fresh data from the server
                         setDepartment(response.data);
                     })
                     .catch((error) => {
                         console.error('Error fetching updated department data:', error);
-                        // Handle the error appropriately, e.g., show an error message
                     });
-
-                // Reset the form
-                setShowAddLectorForm(false);
-                setNewLectorName('');
-                setNewLectorDegree('');
             })
             .catch((error) => {
-                // Handle the error, e.g., display an error message
-                console.error('Error adding new lector:', error);
-                // You might want to implement additional error handling here
+                console.error('Error promoting lector:', error);
             });
     };
 
@@ -110,6 +130,7 @@ const DepartmentTable = ({ department, setDepartment }) => {
                     <tr>
                         <th>Lector Name</th>
                         <th>Grade</th>
+                        <th>Actions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -118,36 +139,42 @@ const DepartmentTable = ({ department, setDepartment }) => {
                             <tr key={lector.id}>
                                 <td>
                                     {editMode && editingLectorId === lector.id ? (
-                                        <input
-                                            type="text"
-                                            value={newName}
-                                            onChange={(e) => setNewName(e.target.value)}
-                                            onKeyPress={(e) => handleKeyPress(e, lector.id)}
-                                        />
+                                        <div>
+                                            <input
+                                                type="text"
+                                                value={newName}
+                                                onChange={(e) => setNewName(e.target.value)}
+                                                onKeyPress={(e) => handleKeyPress(e, lector.id)}
+                                            />
+                                            {nameValidationMessage && (
+                                                <div className="validation-message">{nameValidationMessage}</div>
+                                            )}
+                                        </div>
                                     ) : (
                                         <span
                                             className="editable-name"
                                             onClick={() => handleEditClick(lector.id, lector.name)}
                                         >
-                                                {lector.name}
-                                            </span>
+                                            {lector.name}
+                                        </span>
                                     )}
                                 </td>
                                 <td>{lector.grade}</td>
+                                <td>
+                                    <button onClick={() => handlePromote(lector.id)}>Promote</button>
+                                </td>
                             </tr>
                         ))
                     ) : (
                         <tr>
-                            <td colSpan="2">No lectors in this department</td>
+                            <td colSpan="3">No lectors in this department</td>
                         </tr>
                     )}
                     </tbody>
                 </table>
 
-                {/* Button to show/hide the add lector form */}
                 <button onClick={handleShowAddLectorForm}>Add Lector</button>
 
-                {/* Form to add a new lector */}
                 {showAddLectorForm && (
                     <div>
                         <input
@@ -156,12 +183,20 @@ const DepartmentTable = ({ department, setDepartment }) => {
                             value={newLectorName}
                             onChange={(e) => setNewLectorName(e.target.value)}
                         />
-                        <input
-                            type="text"
-                            placeholder="Lector Degree"
-                            value={newLectorDegree}
-                            onChange={(e) => setNewLectorDegree(e.target.value)}
-                        />
+                        {nameValidationMessage && (
+                            <div className="validation-message">{nameValidationMessage}</div>
+                        )}
+                        <select
+                            value={newGrade}
+                            onChange={(e) => setNewGrade(e.target.value)}
+                        >
+                            <option value="">Select Grade</option>
+                            {GRADE_OPTIONS.map((grade) => (
+                                <option key={grade} value={grade}>
+                                    {grade}
+                                </option>
+                            ))}
+                        </select>
                         <button onClick={handleAddLector}>Add Lector</button>
                         <button onClick={handleCancelAddLector}>Cancel</button>
                     </div>

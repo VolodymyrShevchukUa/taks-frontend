@@ -24,6 +24,31 @@
     max-width: 100%; /* Adjust the max-width as needed */
 }
 
+.app-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.new-department-form {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 300px; /* Adjust the width as needed */
+}
+
+.new-department-form input {
+    margin-bottom: 10px;
+}
+
+.department-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    margin-top: 20px;
+}
+
 
 
 

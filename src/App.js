@@ -1,11 +1,12 @@
-// App.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
-import DepartmentTable from './components/DepartmentTable'; // Import the new component
+import DepartmentComponent from './components/DepartmentTable';
 
 const App = () => {
     const [departments, setDepartments] = useState([]);
+    const [newDepartmentName, setNewDepartmentName] = useState('');
+    const [searchString, setSearchString] = useState('');
 
     useEffect(() => {
         fetchDepartments();
@@ -13,7 +14,18 @@ const App = () => {
 
     const fetchDepartments = async () => {
         try {
-            const response = await axios.get('http://localhost:8080/departments');
+            let url = 'http://localhost:8080/departments';
+
+            if (searchString) {
+                url = 'http://localhost:8080/departments/search';
+            }
+
+            const response = await axios.get(url, {
+                params: {
+                    search: searchString,
+                },
+            });
+
             if (response.data && Array.isArray(response.data)) {
                 console.log('Departments data:', response.data);
                 setDepartments(response.data);
@@ -26,24 +38,68 @@ const App = () => {
     };
 
     const handleDepartmentUpdate = (updatedDepartment) => {
-        // Find the index of the updated department in the array
-        const updatedIndex = departments.findIndex(dep => dep.id === updatedDepartment.id);
+        const updatedIndex = departments.findIndex((department) => department.id === updatedDepartment.id);
 
-        // Create a new array with the updated department
         const updatedDepartments = [...departments];
         updatedDepartments[updatedIndex] = updatedDepartment;
 
-        // Update the state with the new array
         setDepartments(updatedDepartments);
     };
 
+    const handleNewDepartmentSubmit = async () => {
+        try {
+            const response = await axios.post('http://localhost:8080/departments', {
+                name: newDepartmentName,
+            });
+
+            setDepartments((prevDepartments) => [...prevDepartments, response.data]);
+
+            setNewDepartmentName('');
+        } catch (error) {
+            console.error('Error creating new department:', error);
+        }
+    };
+
+    const handleSearchChange = (e) => {
+        setSearchString(e.target.value);
+    };
+
+    const handleSearchSubmit = (e) => {
+        e.preventDefault();
+        fetchDepartments();
+    };
+
     return (
-        <div>
-            <h1></h1>
+        <div className="app-container">
+            <h1>Your App Title</h1>
+
+            {/* Search Bar */}
+            <form onSubmit={handleSearchSubmit}>
+                <input
+                    type="text"
+                    placeholder="Search Departments"
+                    value={searchString}
+                    onChange={handleSearchChange}
+                />
+                <button type="submit">Search</button>
+            </form>
+
+            {/* New Department Form */}
+            <div className="new-department-form">
+                <input
+                    type="text"
+                    placeholder="New Department Name"
+                    value={newDepartmentName}
+                    onChange={(e) => setNewDepartmentName(e.target.value)}
+                />
+                <button onClick={handleNewDepartmentSubmit}>Create Department</button>
+            </div>
+
+            {/* Display Existing Departments */}
             <div className="department-row">
                 {departments.length > 0 ? (
                     departments.map((department) => (
-                        <DepartmentTable
+                        <DepartmentComponent
                             key={department.id}
                             department={department}
                             setDepartment={handleDepartmentUpdate}
